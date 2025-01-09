@@ -126,7 +126,17 @@ if ($CreateMissingShadowAccounts -eq $true) {
 	$rand = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 	$passBytes = New-Object Byte[] 24
 	foreach ($key in $($UsersInB2BGroupHash.keys)) {
-		$samAccountName = $TenantGuestUsersHash[$key].UserPrincipalName.Substring(0, 20)
+		$samAccountName = $TenantGuestUsersHash[$key].UserPrincipalName.Replace('.', '-')
+		$samAccountName = $samAccountName.Substring(0, [System.Math]::Min(20, $samAccountName.Length))
+
+		$samBase = $samAccountName
+		$samIdx = 0
+		while (Get-ADUser -Filter "SamAccountName -eq '$SamAccountName'") {
+			$suffix = $samIdx.ToString()
+			$samAccountName = $samBase.Substring(0, `
+				[System.Math]::Min(20 - $suffix.Length, $samAccountName.Length)) + $suffix
+		}
+
 		$displayName = $TenantGuestUsersHash[$key].UserPrincipalName.Split('#')[0]
 
 		# generate random password
