@@ -123,15 +123,19 @@ if ($WhatIf -eq $true) {
 
 #region 6 - Create Shadow Accounts
 if ($CreateMissingShadowAccounts -eq $true) {
+	$rand = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+	$passBytes = New-Object Byte[] 24
 	foreach ($key in $($UsersInB2BGroupHash.keys)) {
 		$samAccountName = $TenantGuestUsersHash[$key].UserPrincipalName.Substring(0, 20)
 		$displayName = $TenantGuestUsersHash[$key].UserPrincipalName.Split('#')[0]
+
 		# generate random password
-		$bytes = New-Object Byte[] 32
-		$rand = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-		$rand.GetBytes($bytes)
-		$rand.Dispose()
-		$RandPassword = [System.Convert]::ToBase64String($bytes)
+		$rand.GetBytes($passBytes)
+		# Ensure password includes sufficient characters from different character categories to meet various password complexity requirements.
+		$RandPassword = ((((65..90), (97..122), (48..57), ((33..47) + (58..64) + (91..96) + (123..126))) `
+				| ForEach-Object{[char[]]($_ | Get-Random -Count 2)}) `
+			+ [System.Convert]::ToBase64String($passBytes) `
+			| Sort-Object {Get-Random}) -join ''
 
 		New-ADUser -Name $displayName `
 			-SamAccountName $samAccountName `
@@ -145,6 +149,7 @@ if ($CreateMissingShadowAccounts -eq $true) {
 			-SmartcardLogonRequired $true
 		Enable-ADAccount -Identity $samAccountName
 	}
+	$rand.Dispose()
 }
 #endregion
 
