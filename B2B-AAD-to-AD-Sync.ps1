@@ -138,7 +138,7 @@ if ($CreateMissingShadowAccounts -eq $true) {
 			-Path $ShadowAccountOU `
 			-UserPrincipalName $TenantGuestUsersHash[$key].UserPrincipalName `
 			-Description 'Shadow account of Azure AD guest account' `
-			-DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
+			-DisplayName $TenantGuestUsersHash[$key].DisplayName `
 			-AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
 			-ChangePasswordAtLogon $false `
 			-PasswordNeverExpires $true `
