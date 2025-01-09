@@ -1,3 +1,8 @@
+#Requires -Version 5.1
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
 #region 1 - Synopsis
 <#
 .SYNOPSIS
