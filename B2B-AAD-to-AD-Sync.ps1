@@ -137,7 +137,7 @@ if ($CreateMissingShadowAccounts -eq $true) {
 			-SamAccountName $samAccountName `
 			-Path $ShadowAccountOU `
 			-UserPrincipalName $TenantGuestUsersHash[$key].UserPrincipalName `
-			-Description "Shadow account of Azure AD guest account" `
+			-Description 'Shadow account of Azure AD guest account' `
 			-DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
 			-AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
 			-ChangePasswordAtLogon $false `
@@ -152,7 +152,7 @@ if ($CreateMissingShadowAccounts -eq $true) {
 # Restoring disabled users that have been added back to the Azure AD group.
 if ($RestoreDisabledAccounts -eq $true) {
 	foreach ($Shadow in $($ReenabledShadowAccounts.keys)) {
-		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Set-ADUser -Enabled $true -Description "Shadow account of Azure AD guest account"
+		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Set-ADUser -Enabled $true -Description 'Shadow account of Azure AD guest account'
 		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Move-ADObject -TargetPath $ShadowAccountOU
 	}
 }
