@@ -65,7 +65,7 @@ Connect-MgGraph -ClientID $appID -TenantId $tenantID -CertificateThumbprint $Cer
 
 # Populate hash table with all Guest users from tenant using object ID as key
 Get-MgUser -Filter "userType eq 'Guest' and accountenabled eq true" -all | `
-ForEach-Object {$TenantGuestUsersHash[$_.Id] = $_}
+	ForEach-Object {$TenantGuestUsersHash[$_.Id] = $_}
 
 # Populate hash table with membership of target group from Azure AD using object ID as key
 Get-MgGroupMember -GroupId $B2BGroupID -all | `
