@@ -51,7 +51,7 @@ $DeleteOrphanedShadowAccounts = $false #If set to true, guest users who are remo
 # Requires additional configuration - refer to documentation
 $B2BGroupID = 'TODO' # Azure AD group's ObjectID
 $ShadowAccountOU = 'TODO' # DistinguishedName of an OU for placing shadow accounts
-$DisabledShadowAccountOU = 'TODO' # DistinguishedName of an OU for moving disabled shadow accounts
+$DisabledShadowAccountOU = $null # DistinguishedName of an OU for moving disabled shadow accounts
 $AppID = 'TODO' # Insert your application's Client ID
 $TenantID = 'TODO' # Tenant ID of Azure AD
 $Cert = 'TODO' #Certificate thumbprint used by application for authentication
@@ -65,26 +65,40 @@ $B2bDisabledShadowAccountsHash = @{}
 $ReenabledShadowAccounts = @{}
 #endregion
 
+if($null -eq $DisabledShadowAccountOU -and ($RestoreDisabledAccounts -or $DisableOrphanedShadowAccounts)){
+	throw '$DisabledShadowAccountOU is required if $RestoreDisabledAccounts or $DisableOrphanedShadowAccounts are enabled.'
+}
+
 #region 3 - Populate Initial Hash Tables
 Connect-MgGraph -ClientID $appID -TenantId $tenantID -CertificateThumbprint $Cert
 #If you want to run under a user context, run Connect-MgGraph -Scopes 'user.read.all','group.read.all'
 
 # Populate hash table with all Guest users from tenant using object ID as key
-Get-MgUser -Filter "userType eq 'Guest' and accountenabled eq true" -all | `
-	ForEach-Object {$TenantGuestUsersHash[$_.Id] = $_}
+Get-MgUser -Filter "userType eq 'Guest' and accountenabled eq true" -All `
+	| ForEach-Object {
+		$TenantGuestUsersHash[$_.Id] = $_
+	}
 
 # Populate hash table with membership of target group from Azure AD using object ID as key
-Get-MgGroupMember -GroupId $B2BGroupID -all | `
-	ForEach-Object {$UsersInB2BGroupHash[$_.Id] = $_}
+Get-MgGroupMember -GroupId $B2BGroupID -All `
+	| ForEach-Object {
+		$UsersInB2BGroupHash[$_.Id] = $_
+	}
 
 # Populate hash table with all accounts in shadow account OU using UPN as key
-Get-ADUser -filter * -SearchBase $ShadowAccountOU | `
-	Select-Object UserPrincipalName, Name, Description | `
-	ForEach-Object {$B2bShadowAccountsHash[$_.UserPrincipalName] = $_}
+Get-ADUser -Filter * -SearchBase $ShadowAccountOU `
+	| Select-Object UserPrincipalName, Name, Description `
+	| ForEach-Object {
+		$B2bShadowAccountsHash[$_.UserPrincipalName] = $_
+	}
 
-Get-ADUser -filter * -SearchBase $DisabledShadowAccountOU | `
-	Select-Object UserPrincipalName, Name, Description | `
-	ForEach-Object {$B2bDisabledShadowAccountsHash[$_.UserPrincipalName] = $_}
+if($DisabledShadowAccountOU){
+	Get-ADUser -Filter * -SearchBase $DisabledShadowAccountOU `
+		| Select-Object UserPrincipalName, Name, Description `
+		| ForEach-Object {
+			$B2bDisabledShadowAccountsHash[$_.UserPrincipalName] = $_
+		}
+}
 #endregion
 
 #region 4 - Populate Hash Table Differencing Lists
@@ -178,8 +192,10 @@ if ($CreateMissingShadowAccounts -eq $true) {
 # Restoring disabled users that have been added back to the Azure AD group.
 if ($RestoreDisabledAccounts -eq $true) {
 	foreach ($Shadow in $($ReenabledShadowAccounts.keys)) {
-		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Set-ADUser -Enabled $true -Description 'Shadow account of Azure AD guest account'
-		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Move-ADObject -TargetPath $ShadowAccountOU
+		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU `
+			| Set-ADUser -Enabled $true -Description 'Shadow account of Azure AD guest account'
+		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU `
+			| Move-ADObject -TargetPath $ShadowAccountOU
 	}
 }
 
@@ -189,10 +205,13 @@ if ($DisableOrphanedShadowAccounts -eq $true -or $DeleteOrphanedShadowAccounts -
 		# $upn = the key from B2bShadowAccountsHash = $shadow
 		# disable operation takes precedence over deletion
 		if ($DisableOrphanedShadowAccounts -eq $true) {
-			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Set-ADUser -Enabled $false -Description 'Disabled pending removal'
-			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Move-ADObject -TargetPath $DisabledShadowAccountOU
+			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU `
+				| Set-ADUser -Enabled $false -Description 'Disabled pending removal'
+			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU `
+				| Move-ADObject -TargetPath $DisabledShadowAccountOU
 		} elseif ($DeleteOrphanedShadowAccounts -eq $true) {
-			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Remove-ADUser
+			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU `
+				| Remove-ADUser
 		}
 	}
 }
