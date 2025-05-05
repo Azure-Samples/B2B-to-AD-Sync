@@ -15,10 +15,10 @@ $ErrorActionPreference = 'Stop'
 	- (Optional) Delete shadow accounts in the OU who no longer exist in Azure AD
 	- (Optional) Restore orphaned shadow accounts if the corresponding guest user is re-added to the Azure AD group
 	Shadow accounts will be created with the following properties:
-			-AccountPassword = random strong password
-			-ChangePasswordAtLogon = $false
-			-PasswordNeverExpires = $true
-			-SmartcardLogonRequired = $true
+		-AccountPassword = random strong password
+		-ChangePasswordAtLogon = $false
+		-PasswordNeverExpires = $true
+		-SmartcardLogonRequired = $true
 	NOTE: This does not support group nesting in the Azure AD Group
 .DESCRIPTION
 	Version: 1.0.3
@@ -167,10 +167,10 @@ if ($CreateMissingShadowAccounts -eq $true) {
 		# Ensure password includes sufficient characters from different character categories to meet various password complexity requirements.
 		# (Upper, Lower, Numbers, Special)
 		(((65..90), (97..122), (48..57), ((33..47) + (58..64) + (91..96) + (123..126))) `
-			| ForEach-Object{[char[]]($_ | Get-Random -Count 2)}) `
-		+ [System.Convert]::ToBase64String($passBytes).ToCharArray() `
-		| Sort-Object {$rand.GetBytes($sortBytes); [System.BitConverter]::ToInt64($sortBytes, 0)} `
-		| ForEach-Object{$secRandPassword.AppendChar($_)}
+				| ForEach-Object{[char[]]($_ | Get-Random -Count 2)}) `
+			+ [System.Convert]::ToBase64String($passBytes).ToCharArray() `
+			| Sort-Object {$rand.GetBytes($sortBytes); [System.BitConverter]::ToInt64($sortBytes, 0)} `
+			| ForEach-Object{$secRandPassword.AppendChar($_)}
 		$secRandPassword.MakeReadOnly()
 
 		New-ADUser -Name $displayName `
