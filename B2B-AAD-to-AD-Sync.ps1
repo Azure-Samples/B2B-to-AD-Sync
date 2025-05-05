@@ -1,4 +1,5 @@
 #Requires -Version 5.1
+#Requires -Modules ActiveDirectory
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
