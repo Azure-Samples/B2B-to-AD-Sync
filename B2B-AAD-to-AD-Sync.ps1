@@ -1,5 +1,6 @@
 #Requires -Version 5.1
 #Requires -Modules ActiveDirectory
+#Requires -Modules Microsoft.Graph
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
