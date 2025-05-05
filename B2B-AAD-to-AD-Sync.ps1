@@ -131,6 +131,7 @@ if ($WhatIf -eq $true) {
 if ($CreateMissingShadowAccounts -eq $true) {
 	$rand = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 	$passBytes = New-Object Byte[] 24
+	$sortBytes = New-Object Byte[] 8
 	foreach ($key in $($UsersInB2BGroupHash.keys)) {
 		$samAccountName = $TenantGuestUsersHash[$key].UserPrincipalName.Replace('.', '-')
 		$samAccountName = $samAccountName.Substring(0, [System.Math]::Min(20, $samAccountName.Length))
@@ -147,11 +148,15 @@ if ($CreateMissingShadowAccounts -eq $true) {
 
 		# generate random password
 		$rand.GetBytes($passBytes)
+		$secRandPassword = [System.Security.SecureString]::new()
 		# Ensure password includes sufficient characters from different character categories to meet various password complexity requirements.
-		$RandPassword = ((((65..90), (97..122), (48..57), ((33..47) + (58..64) + (91..96) + (123..126))) `
-				| ForEach-Object{[char[]]($_ | Get-Random -Count 2)}) `
-			+ [System.Convert]::ToBase64String($passBytes) `
-			| Sort-Object {Get-Random}) -join ''
+		# (Upper, Lower, Numbers, Special)
+		(((65..90), (97..122), (48..57), ((33..47) + (58..64) + (91..96) + (123..126))) `
+			| ForEach-Object{[char[]]($_ | Get-Random -Count 2)}) `
+		+ [System.Convert]::ToBase64String($passBytes).ToCharArray() `
+		| Sort-Object {$rand.GetBytes($sortBytes); [System.BitConverter]::ToInt64($sortBytes, 0)} `
+		| ForEach-Object{$secRandPassword.AppendChar($_)}
+		$secRandPassword.MakeReadOnly()
 
 		New-ADUser -Name $displayName `
 			-SamAccountName $samAccountName `
@@ -159,7 +164,7 @@ if ($CreateMissingShadowAccounts -eq $true) {
 			-UserPrincipalName $TenantGuestUsersHash[$key].UserPrincipalName `
 			-Description 'Shadow account of Azure AD guest account' `
 			-DisplayName $TenantGuestUsersHash[$key].DisplayName `
-			-AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
+			-AccountPassword $secRandPassword `
 			-ChangePasswordAtLogon $false `
 			-PasswordNeverExpires $true `
 			-SmartcardLogonRequired $true
