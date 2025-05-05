@@ -112,18 +112,18 @@ if ($WhatIf -eq $true) {
 	$DisableOrphanedShadowAccounts = $false
 	$DeleteOrphanedShadowAccounts = $false
 
-	Write-Host ''
-	Write-Host '*****Azure AD Guest Accounts that will have Shadow Accounts created*****'
+	Write-Information ''
+	Write-Information '*****Azure AD Guest Accounts that will have Shadow Accounts created*****'
 	foreach ($key in $($UsersInB2BGroupHash.Keys)) {
 		$TenantGuestUsersHash[$key].UserPrincipalName
 	}
-	Write-Host ''
-	Write-Host '*****Orphaned Shadow Accounts that will be disabled or deleted*****'
+	Write-Information ''
+	Write-Information '*****Orphaned Shadow Accounts that will be disabled or deleted*****'
 	$B2bShadowAccountsHash.Keys
-	Write-Host ''
-	Write-Host '*****Disabled Shadow accounts whose Guest account has been re-added to the Azure AD group - Can be re-enabled*****'
+	Write-Information ''
+	Write-Information '*****Disabled Shadow accounts whose Guest account has been re-added to the Azure AD group - Can be re-enabled*****'
 	$ReenabledShadowAccounts.Keys
-	Write-Host ''
+	Write-Information ''
 }
 #endregion
 
