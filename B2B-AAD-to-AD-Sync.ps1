@@ -10,7 +10,7 @@
     Shadow accounts will be created with the following properties:
             -AccountPassword = random strong password
             -ChangePasswordAtLogon = $false
-            –PasswordNeverExpires = $true
+            -PasswordNeverExpires = $true
             -SmartcardLogonRequired = $true
     NOTE: This does not support group nesting in the Azure AD Group
 .DESCRIPTION
@@ -52,7 +52,7 @@ $Cert = "TODO" #Certificate thumbprint used by application for authentication
 
 # No need to modify more variables
 # Variable initialization
-$TenantGuestUsersHash = @{} 
+$TenantGuestUsersHash = @{}
 $UsersInB2BGroupHash = @{}
 $B2bShadowAccountsHash = @{}
 $B2bDisabledShadowAccountsHash = @{}
@@ -61,7 +61,7 @@ $ReenabledShadowAccounts = @{}
 
 #region 3 - Populate Initial Hash Tables
 Connect-MgGraph -ClientID $appID -TenantId $tenantID -CertificateThumbprint $Cert
-#If you want to run under a user context, run Connect-MgGraph -Scopes "user.read.all","group.read.all" 
+#If you want to run under a user context, run Connect-MgGraph -Scopes "user.read.all","group.read.all"
 
 # Populate hash table with all Guest users from tenant using object ID as key
 get-mguser -Filter "userType eq 'Guest' and accountenabled eq true" -all |  `
@@ -73,11 +73,11 @@ Get-MgGroupMember -GroupId $B2BGroupID -all | `
 
 # Populate hash table with all accounts in shadow account OU using UPN as key
 Get-AdUser -filter * -SearchBase $ShadowAccountOU | `
-	Select-Object UserPrincipalName, Name, Description | ` 
+	Select-Object UserPrincipalName, Name, Description | `
 	ForEach-Object {$B2bShadowAccountsHash[$_.UserPrincipalName] = $_}
 
 Get-AdUser -filter * -SearchBase $DisabledShadowAccountOU | `
-	Select-Object UserPrincipalName, Name, Description | ` 
+	Select-Object UserPrincipalName, Name, Description | `
 	ForEach-Object {$B2bDisabledShadowAccountsHash[$_.UserPrincipalName] = $_}
 #endregion 
 
@@ -150,7 +150,7 @@ If ($CreateMissingShadowAccounts -eq $true)
             -DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
             -AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
             -ChangePasswordAtLogon $false `
-            –PasswordNeverExpires $true `
+            -PasswordNeverExpires $true `
             -SmartcardLogonRequired $true
         Enable-ADAccount -Identity $samaccountname
         }
@@ -163,7 +163,7 @@ If ($RestoreDisabledAccounts -eq $true)
     {
      ForEach ($Shadow in $($ReenabledShadowAccounts.keys))
         {
-            Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Set-ADUser -Enabled $true -Description "Shadow account of Azure AD guest account" 
+            Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Set-ADUser -Enabled $true -Description "Shadow account of Azure AD guest account"
             Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Move-ADObject -TargetPath $ShadowAccountOU
         }
     }
@@ -177,8 +177,8 @@ If ($RestoreDisabledAccounts -eq $true)
             # disable operation takes precedence over deletion
             If ($DisableOrphanedShadowAccounts -eq $true)
             {
-                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU| Set-ADUser -Enabled $false -Description 'Disabled pending removal' 
-                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Move-ADObject -TargetPath $DisabledShadowAccountOU         
+                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU| Set-ADUser -Enabled $false -Description 'Disabled pending removal'
+                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Move-ADObject -TargetPath $DisabledShadowAccountOU
             }
             ElseIf ($DeleteOrphanedShadowAccounts = $true)
             {
