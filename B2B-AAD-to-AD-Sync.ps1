@@ -133,7 +133,7 @@ If ($CreateMissingShadowAccounts -eq $true)
 {
     ForEach($key in $($UsersInB2BGroupHash.keys))
         {
-        $samaccountname = $TenantGuestUsersHash[$key].userprincipalname.Substring(0, 20)
+        $samaccountname = $TenantGuestUsersHash[$key].userprincipalname.Substring(0, 20).TrimEnd('.') # sAMAccountName must be no longer than 20 characters long and final character cannot be a period https://learn.microsoft.com/en-us/archive/technet-wiki/11216.active-directory-requirements-for-creating-objects#objects-with-samaccountname-attribute
         $displayname = $TenantGuestUsersHash[$key].userprincipalname.Split('#')[0]
         # generate random password
         $bytes = New-Object Byte[] 32
@@ -142,12 +142,14 @@ If ($CreateMissingShadowAccounts -eq $true)
         $rand.Dispose()
         $RandPassword = [System.Convert]::ToBase64String($bytes)
             
-        New-ADUser -Name $displayname `
+        # Create AD user account, setting adminDescription to 'User_', to filter account from sync via Entra Connect Sync - based on https://blogs.perficient.com/2016/04/11/office-365-the-previously-undocumented-aad-connect-filter/
+	New-ADUser -Name $displayname `
             -SamAccountName $samaccountname `
             -Path $ShadowAccountOU `
             -UserPrincipalName $TenantGuestUsersHash[$key].userprincipalname `
             -Description "Shadow account of Azure AD guest account" `
             -DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
+	    -OtherAttributes @{'adminDescription'="User_FilterAzureAD"} `
             -AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
             -ChangePasswordAtLogon $false `
             –PasswordNeverExpires $true `
