@@ -133,7 +133,7 @@ If ($CreateMissingShadowAccounts -eq $true)
 {
     ForEach($key in $($UsersInB2BGroupHash.keys))
         {
-        $samaccountname = $TenantGuestUsersHash[$key].userprincipalname.Substring(0, 20).TrimEnd('.') # sAMAccountName must be no longer than 20 characters long and final character cannot be a period https://learn.microsoft.com/en-us/archive/technet-wiki/11216.active-directory-requirements-for-creating-objects#objects-with-samaccountname-attribute
+        $samaccountname = (-join $TenantGuestUsersHash[$key].userprincipalname[0..19]).TrimEnd('.') # sAMAccountName must be no longer than 20 characters long and final character cannot be a period https://learn.microsoft.com/en-us/archive/technet-wiki/11216.active-directory-requirements-for-creating-objects#objects-with-samaccountname-attribute
         $displayname = $TenantGuestUsersHash[$key].userprincipalname.Split('#')[0]
         # generate random password
         $bytes = New-Object Byte[] 32
@@ -148,7 +148,7 @@ If ($CreateMissingShadowAccounts -eq $true)
             -Path $ShadowAccountOU `
             -UserPrincipalName $TenantGuestUsersHash[$key].userprincipalname `
             -Description "Shadow account of Azure AD guest account" `
-            -DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
+            -DisplayName $TenantGuestUsersHash[$key].DisplayName `
 	    -OtherAttributes @{'adminDescription'="User_FilterAzureAD"} `
             -AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
             -ChangePasswordAtLogon $false `
