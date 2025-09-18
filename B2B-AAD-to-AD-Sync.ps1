@@ -182,7 +182,7 @@ If ($RestoreDisabledAccounts -eq $true)
             }
             ElseIf ($DeleteOrphanedShadowAccounts = $true)
             {
-                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Remove-AdUser
+                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Remove-AdUser -Confirm:$false
             }
         }
   }
