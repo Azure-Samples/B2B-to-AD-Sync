@@ -10,7 +10,7 @@
     Shadow accounts will be created with the following properties:
             -AccountPassword = random strong password
             -ChangePasswordAtLogon = $false
-            –PasswordNeverExpires = $true
+            -PasswordNeverExpires = $true
             -SmartcardLogonRequired = $true
     NOTE: This does not support group nesting in the Azure AD Group
 .DESCRIPTION
@@ -150,7 +150,7 @@ If ($CreateMissingShadowAccounts -eq $true)
             -DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
             -AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
             -ChangePasswordAtLogon $false `
-            –PasswordNeverExpires $true `
+            -PasswordNeverExpires $true `
             -SmartcardLogonRequired $true
         Enable-ADAccount -Identity $samaccountname
         }
