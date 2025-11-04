@@ -124,7 +124,7 @@ if ($WhatIf -eq $true) {
 #region 6 - Create Shadow Accounts
 if ($CreateMissingShadowAccounts -eq $true) {
 	foreach ($key in $($UsersInB2BGroupHash.keys)) {
-		$samAccountName = $TenantGuestUsersHash[$key].UserPrincipalName.Substring(0, 20)
+		$samaccountname = (-join $TenantGuestUsersHash[$key].userprincipalname.Split("@")[0][0..19]).TrimEnd('.') # SAMAccountName must be no longer than 20 characters long and final character cannot be a period
 		$displayName = $TenantGuestUsersHash[$key].UserPrincipalName.Split('#')[0]
 		# generate random password
 		$bytes = New-Object Byte[] 32
@@ -166,7 +166,7 @@ if ($DisableOrphanedShadowAccounts -eq $true -or $DeleteOrphanedShadowAccounts -
 			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Set-ADUser -Enabled $false -Description 'Disabled pending removal'
 			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Move-ADObject -TargetPath $DisabledShadowAccountOU
 		} elseif ($DeleteOrphanedShadowAccounts -eq $true) {
-			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Remove-ADUser
+			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Remove-ADUser -Confirm:$false
 		}
 	}
 }
