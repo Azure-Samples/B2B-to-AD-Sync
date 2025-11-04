@@ -1,27 +1,27 @@
 #region 1 - Synopsis
-<# 
+<#
 .SYNOPSIS
-    Sample script to create shadow accounts in AD for Azure AD Application Proxy KCD delegation for Azure AD B2B Guest accounts.
-    Includes options to: 
-    - Create shadow accounts in an OU of Azure AD guest users. This can be scoped to guests in a specific Azure AD group.
-    - (Optional) Disable and move shadow accounts who no longer exist in Azure AD to a different OU
-    - (Optional) Delete shadow accounts in the OU who no longer exist in Azure AD
-    - (Optional) Restore orphaned shadow accounts if the corresponding guest user is re-added to the Azure AD group
-    Shadow accounts will be created with the following properties:
-            -AccountPassword = random strong password
-            -ChangePasswordAtLogon = $false
-            -PasswordNeverExpires = $true
-            -SmartcardLogonRequired = $true
-    NOTE: This does not support group nesting in the Azure AD Group
+	Sample script to create shadow accounts in AD for Azure AD Application Proxy KCD delegation for Azure AD B2B Guest accounts.
+	Includes options to:
+	- Create shadow accounts in an OU of Azure AD guest users. This can be scoped to guests in a specific Azure AD group.
+	- (Optional) Disable and move shadow accounts who no longer exist in Azure AD to a different OU
+	- (Optional) Delete shadow accounts in the OU who no longer exist in Azure AD
+	- (Optional) Restore orphaned shadow accounts if the corresponding guest user is re-added to the Azure AD group
+	Shadow accounts will be created with the following properties:
+			-AccountPassword = random strong password
+			-ChangePasswordAtLogon = $false
+			-PasswordNeverExpires = $true
+			-SmartcardLogonRequired = $true
+	NOTE: This does not support group nesting in the Azure AD Group
 .DESCRIPTION
-    Version: 1.0.3
-    This is currently a beta level script and intended to be used as a demonstration script
+	Version: 1.0.3
+	This is currently a beta level script and intended to be used as a demonstration script
 .DISCLAIMER
-    THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-    ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-    THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-    PARTICULAR PURPOSE.
-    Copyright (c) Microsoft Corporation. All rights reserved.
+	THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
+	ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+	THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
+	PARTICULAR PURPOSE.
+	Copyright (c) Microsoft Corporation. All rights reserved.
 #>
 
 <#
@@ -43,16 +43,16 @@ $DeleteOrphanedShadowAccounts = $false #If set to true, guest users who are remo
 
 # Replace all TODO values with the appropriate value.
 # Requires additional configuration - refer to documentation
-$B2BGroupID = "TODO" #Azure AD group's ObjectID
-$ShadowAccountOU = "TODO" #DistinguishedName of an OU for placing shadow accounts
-$DisabledShadowAccountOU = "TODO" #DistinguishedName of an OU for moving disabled shadow accounts
-$AppID = "TODO" # Insert your application's Client ID
-$TenantID = "TODO" # Tenant ID of Azure AD
-$Cert = "TODO" #Certificate thumbprint used by application for authentication
+$B2BGroupID = 'TODO' # Azure AD group's ObjectID
+$ShadowAccountOU = 'TODO' # DistinguishedName of an OU for placing shadow accounts
+$DisabledShadowAccountOU = 'TODO' # DistinguishedName of an OU for moving disabled shadow accounts
+$AppID = 'TODO' # Insert your application's Client ID
+$TenantID = 'TODO' # Tenant ID of Azure AD
+$Cert = 'TODO' #Certificate thumbprint used by application for authentication
 
 # No need to modify more variables
 # Variable initialization
-$TenantGuestUsersHash = @{} 
+$TenantGuestUsersHash = @{}
 $UsersInB2BGroupHash = @{}
 $B2bShadowAccountsHash = @{}
 $B2bDisabledShadowAccountsHash = @{}
@@ -61,129 +61,113 @@ $ReenabledShadowAccounts = @{}
 
 #region 3 - Populate Initial Hash Tables
 Connect-MgGraph -ClientID $appID -TenantId $tenantID -CertificateThumbprint $Cert
-#If you want to run under a user context, run Connect-MgGraph -Scopes "user.read.all","group.read.all" 
+#If you want to run under a user context, run Connect-MgGraph -Scopes 'user.read.all','group.read.all'
 
 # Populate hash table with all Guest users from tenant using object ID as key
-get-mguser -Filter "userType eq 'Guest' and accountenabled eq true" -all |  `
-ForEach-Object {$TenantGuestUsersHash[$_.Id] = $_}
+Get-MgUser -Filter "userType eq 'Guest' and accountenabled eq true" -all | `
+	ForEach-Object {$TenantGuestUsersHash[$_.Id] = $_}
 
 # Populate hash table with membership of target group from Azure AD using object ID as key
 Get-MgGroupMember -GroupId $B2BGroupID -all | `
 	ForEach-Object {$UsersInB2BGroupHash[$_.Id] = $_}
 
 # Populate hash table with all accounts in shadow account OU using UPN as key
-Get-AdUser -filter * -SearchBase $ShadowAccountOU | `
-	Select-Object UserPrincipalName, Name, Description | ` 
+Get-ADUser -filter * -SearchBase $ShadowAccountOU | `
+	Select-Object UserPrincipalName, Name, Description | `
 	ForEach-Object {$B2bShadowAccountsHash[$_.UserPrincipalName] = $_}
 
-Get-AdUser -filter * -SearchBase $DisabledShadowAccountOU | `
-	Select-Object UserPrincipalName, Name, Description | ` 
+Get-ADUser -filter * -SearchBase $DisabledShadowAccountOU | `
+	Select-Object UserPrincipalName, Name, Description | `
 	ForEach-Object {$B2bDisabledShadowAccountsHash[$_.UserPrincipalName] = $_}
-#endregion 
+#endregion
 
 #region 4 - Populate Hash Table Differencing Lists
-ForEach($key in $($UsersInB2BGroupHash.Keys))
-    {
-    # remove non-guest users from the Azure AD Group list in case members are accidentally added to the group
-    if($TenantGuestUsersHash.ContainsKey($key) -eq $false)
-        {
-        $UsersInB2BGroupHash.Remove($key)
-        }
-    # B2B guest user already has a shadow account remove from both lists
-    # we'll then end up with 2 differencing lists
-    elseif ($B2bShadowAccountsHash.ContainsKey($TenantGuestUsersHash[$key].userprincipalname))
-        {
-        $UsersInB2BGroupHash.Remove($key)
-        $B2bShadowAccountsHash.Remove($TenantGuestUsersHash[$key].userprincipalname)
-        }
-    elseif ($B2bDisabledShadowAccountsHash.ContainsKey($TenantGuestUsersHash[$key].userprincipalname))
-        {
-        $ReenabledShadowAccounts.Add($TenantGuestUsersHash[$key].userprincipalname,$key)
-        $UsersInB2BGroupHash.Remove($key)
-        }
-    }
+foreach ($key in $($UsersInB2BGroupHash.Keys)) {
+	# remove non-guest users from the Azure AD Group list in case members are accidentally added to the group
+	if ($TenantGuestUsersHash.ContainsKey($key) -eq $false) {
+		$UsersInB2BGroupHash.Remove($key)
+	}
+	# B2B guest user already has a shadow account remove from both lists
+	# we'll then end up with 2 differencing lists
+	elseif ($B2bShadowAccountsHash.ContainsKey($TenantGuestUsersHash[$key].UserPrincipalName)) {
+		$UsersInB2BGroupHash.Remove($key)
+		$B2bShadowAccountsHash.Remove($TenantGuestUsersHash[$key].UserPrincipalName)
+	} elseif ($B2bDisabledShadowAccountsHash.ContainsKey($TenantGuestUsersHash[$key].UserPrincipalName)) {
+		$ReenabledShadowAccounts.Add($TenantGuestUsersHash[$key].UserPrincipalName,$key)
+		$UsersInB2BGroupHash.Remove($key)
+	}
+}
 #endregion
 
 #region 5 - What If Mode
-If($WhatIf -eq $true)
-{
-$CreateMissingShadowAccounts = $false
-$RestoreDisabledAccounts = $false
-$DisableOrphanedShadowAccounts = $false 
-$DeleteOrphanedShadowAccounts = $false
+if ($WhatIf -eq $true) {
+	$CreateMissingShadowAccounts = $false
+	$RestoreDisabledAccounts = $false
+	$DisableOrphanedShadowAccounts = $false
+	$DeleteOrphanedShadowAccounts = $false
 
-Write-Host ""
-Write-Host "*****Azure AD Guest Accounts that will have Shadow Accounts created*****"
-ForEach($key in $($UsersInB2BGroupHash.Keys))
-{
-$TenantGuestUsersHash[$key].userprincipalname
-}
-Write-Host ""
-Write-Host "*****Orphaned Shadow Accounts that will be disabled or deleted*****"
-$B2bShadowAccountsHash.Keys
-Write-Host ""
-Write-Host "*****Disabled Shadow accounts whose Guest account has been re-added to the Azure AD group - Can be re-enabled*****"
-$ReenabledShadowAccounts.Keys
-Write-Host ""
+	Write-Host ''
+	Write-Host '*****Azure AD Guest Accounts that will have Shadow Accounts created*****'
+	foreach ($key in $($UsersInB2BGroupHash.Keys)) {
+		$TenantGuestUsersHash[$key].UserPrincipalName
+	}
+	Write-Host ''
+	Write-Host '*****Orphaned Shadow Accounts that will be disabled or deleted*****'
+	$B2bShadowAccountsHash.Keys
+	Write-Host ''
+	Write-Host '*****Disabled Shadow accounts whose Guest account has been re-added to the Azure AD group - Can be re-enabled*****'
+	$ReenabledShadowAccounts.Keys
+	Write-Host ''
 }
 #endregion
 
 #region 6 - Create Shadow Accounts
-If ($CreateMissingShadowAccounts -eq $true)
-{
-    ForEach($key in $($UsersInB2BGroupHash.keys))
-        {
-        $samaccountname = $TenantGuestUsersHash[$key].userprincipalname.Substring(0, 20)
-        $displayname = $TenantGuestUsersHash[$key].userprincipalname.Split('#')[0]
-        # generate random password
-        $bytes = New-Object Byte[] 32
-        $rand = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-        $rand.GetBytes($bytes)
-        $rand.Dispose()
-        $RandPassword = [System.Convert]::ToBase64String($bytes)
-            
-        New-ADUser -Name $displayname `
-            -SamAccountName $samaccountname `
-            -Path $ShadowAccountOU `
-            -UserPrincipalName $TenantGuestUsersHash[$key].userprincipalname `
-            -Description "Shadow account of Azure AD guest account" `
-            -DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
-            -AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
-            -ChangePasswordAtLogon $false `
-            -PasswordNeverExpires $true `
-            -SmartcardLogonRequired $true
-        Enable-ADAccount -Identity $samaccountname
-        }
+if ($CreateMissingShadowAccounts -eq $true) {
+	foreach ($key in $($UsersInB2BGroupHash.keys)) {
+		$samAccountName = $TenantGuestUsersHash[$key].UserPrincipalName.Substring(0, 20)
+		$displayName = $TenantGuestUsersHash[$key].UserPrincipalName.Split('#')[0]
+		# generate random password
+		$bytes = New-Object Byte[] 32
+		$rand = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+		$rand.GetBytes($bytes)
+		$rand.Dispose()
+		$RandPassword = [System.Convert]::ToBase64String($bytes)
+
+		New-ADUser -Name $displayName `
+			-SamAccountName $samAccountName `
+			-Path $ShadowAccountOU `
+			-UserPrincipalName $TenantGuestUsersHash[$key].UserPrincipalName `
+			-Description 'Shadow account of Azure AD guest account' `
+			-DisplayName $TenantGuestUsersHash[$key].Value.DisplayName `
+			-AccountPassword (ConvertTo-SecureString $RandPassword -AsPlainText -Force) `
+			-ChangePasswordAtLogon $false `
+			-PasswordNeverExpires $true `
+			-SmartcardLogonRequired $true
+		Enable-ADAccount -Identity $samAccountName
+	}
 }
 #endregion
 
 #region 7 - Clean up
 # Restoring disabled users that have been added back to the Azure AD group.
-If ($RestoreDisabledAccounts -eq $true)
-    {
-     ForEach ($Shadow in $($ReenabledShadowAccounts.keys))
-        {
-            Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Set-ADUser -Enabled $true -Description "Shadow account of Azure AD guest account" 
-            Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Move-ADObject -TargetPath $ShadowAccountOU
-        }
-    }
+if ($RestoreDisabledAccounts -eq $true) {
+	foreach ($Shadow in $($ReenabledShadowAccounts.keys)) {
+		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Set-ADUser -Enabled $true -Description 'Shadow account of Azure AD guest account'
+		Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $DisabledShadowAccountOU | Move-ADObject -TargetPath $ShadowAccountOU
+	}
+}
 
 # Clean up Shadow accounts that have been removed from the Azure AD group.
- If ($DisableOrphanedShadowAccounts -eq $true -or $DeleteOrphanedShadowAccounts -eq $true)
- {
-      ForEach ($shadow in $($B2bShadowAccountsHash.keys))
-        {
-            # $upn = the key from B2bShadowAccountsHash = $shadow
-            # disable operation takes precedence over deletion
-            If ($DisableOrphanedShadowAccounts -eq $true)
-            {
-                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU| Set-ADUser -Enabled $false -Description 'Disabled pending removal' 
-                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Move-ADObject -TargetPath $DisabledShadowAccountOU         
-            }
-            ElseIf ($DeleteOrphanedShadowAccounts = $true)
-            {
-                Get-AdUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Remove-AdUser
-            }
-        }
-  }
-  #endregion
+if ($DisableOrphanedShadowAccounts -eq $true -or $DeleteOrphanedShadowAccounts -eq $true) {
+	foreach ($shadow in $($B2bShadowAccountsHash.keys)) {
+		# $upn = the key from B2bShadowAccountsHash = $shadow
+		# disable operation takes precedence over deletion
+		if ($DisableOrphanedShadowAccounts -eq $true) {
+			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Set-ADUser -Enabled $false -Description 'Disabled pending removal'
+			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Move-ADObject -TargetPath $DisabledShadowAccountOU
+		} elseif ($DeleteOrphanedShadowAccounts -eq $true) {
+			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU | Remove-ADUser
+		}
+	}
+}
+#endregion
