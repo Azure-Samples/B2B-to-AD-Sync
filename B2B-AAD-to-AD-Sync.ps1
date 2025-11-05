@@ -22,7 +22,7 @@ $ErrorActionPreference = 'Stop'
 		-SmartcardLogonRequired = $true
 	NOTE: This does not support group nesting in the Azure AD Group
 .DESCRIPTION
-	Version: 1.0.3
+	Version: 2.0
 	This is currently a beta level script and intended to be used as a demonstration script
 .DISCLAIMER
 	THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
