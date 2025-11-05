@@ -220,7 +220,7 @@ if ($DisableOrphanedShadowAccounts -eq $true -or $DeleteOrphanedShadowAccounts -
 				| Move-ADObject -TargetPath $DisabledShadowAccountOU
 		} elseif ($DeleteOrphanedShadowAccounts -eq $true) {
 			Get-ADUser -Filter {UserPrincipalName -eq $shadow} -SearchBase $ShadowAccountOU `
-				| Remove-ADUser
+				| Remove-ADUser -Confirm:$false
 		}
 	}
 }

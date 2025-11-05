@@ -1,10 +1,10 @@
-# B2B-AAD-to-AD-Sync
-Sample script that syncs Azure AD guests to On-prem AD to grant access to on-prem resources via Azure AD Application Proxy (KCD).
+# B2B-EntraID-to-AD-Sync
+Sample script that syncs Entra ID B2B guests to On-prem AD to grant access to on-prem resources via Microsoft Entra Application Proxy (using KCD).
 
 ## Pre-requisites
 ### Create a Certificate for Authentication
 Run the following on the machine that will be running the script to create a self-signed certificate. This is optional if you're using your own certificate (recommended approach).
-- Copy the certificate thumbprint value for later use and move the .cer file to the device you will use to upload the certificate to Azure AD (see step #9 below).
+- Copy the certificate thumbprint value for later use and move the .cer file to the device you will use to upload the certificate to Entra ID (see step #9 below).
 
 ```
 $certsubject = "TODO" #Be sure to enter “CN=” and then the name. For example, “CN=SelfSignedCert”  
@@ -17,15 +17,15 @@ $cert | Select-Object subject, thumbprint
 ```
 
 
-### Create an App Registration in Azure AD
-[How to create an App Registration (Microsoft Documentation)](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app#register-an-application)
-1. In a browser, go to https://aad.portal.azure.com and sign in with an admin account with one of the following roles:
+### Create an App Registration in Entra ID
+[How to create an App Registration (Microsoft Documentation)](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app#register-an-application)
+1. In a browser, go to https://entra.microsoft.com and sign in with an admin account with one of the following roles:
 - Global Administrator
 - Cloud Application Administrator
 - Application Administrator
-2. Navigate to "Azure Active Directory" -> "App registrations" -> click "New Registration" 
+2. Navigate to "Entra ID" -> "App registrations" -> click "New Registration" 
 3. Enter a name for the application.
-4. Under Supported account types, select "Accounts in this organizational directory only (Aperture Science only - Single tenant)"
+4. Under Supported account types, select "Accounts in this organizational directory only (Org name only - Single tenant)"
 ![Image 1](/DocImages/Image1.jpg)
 5. Click "Register". You should then be taken to App Registration Overview blade.
 6. At the app registration Overview blade, copy the "Application (client) ID" and "Directory (tenant) ID" values for later use.
@@ -52,17 +52,17 @@ You will need to install the following PowerShell modules on the server that wil
   ```
   Install-WindowsFeature RSAT-AD-PowerShell
   ```
-  - [Microsoft Graph PowerShell Module](https://docs.microsoft.com/en-us/graph/powershell/installation)
+  - [Microsoft Graph PowerShell Module](https://learn.microsoft.com/powershell/microsoftgraph/overview?view=graph-powershell-1.0)
   ```
   Install-Module Microsoft.Graph -Scope AllUsers
   ```
 
 ### Insert Script Values
 Replace the "TODO" values in the script with the appropriate values, some of which were obtained in the above steps. They include:
-- Tenant ID of your Azure AD tenant
-- Client ID of the Azure AD App Registration
+- Tenant ID of your Entra ID tenant
+- Client ID of the Entra ID App Registration
 - Certificate thumbprint used by application for authentication
-- Object ID of the [Azure AD group](https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/active-directory-groups-create-azure-portal#create-a-basic-group-and-add-members) where you will add guest accounts you want to have synced
+- Object ID of the [Entra ID group](https://docs.microsoft.com/en-us/azure/active-directory/fundamentals/active-directory-groups-create-azure-portal#create-a-basic-group-and-add-members) where you will add guest accounts you want to have synced
 - [DistinguishedName](https://support.xink.io/support/solutions/articles/1000246165-how-to-find-the-distinguishedname-of-an-ou-) of the OU where Shadow Accounts will be created
 - DistinguishedName of the OU where Shadow Accounts will be moved to if they are orphaned
 
