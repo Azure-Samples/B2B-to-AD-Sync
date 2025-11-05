@@ -53,7 +53,7 @@ $DeleteOrphanedShadowAccounts = $false #If set to true, guest users who are remo
 # Requires additional configuration - refer to documentation
 $B2BGroupID = 'TODO' # Azure AD group's ObjectID
 $ShadowAccountOU = 'TODO' # DistinguishedName of an OU for placing shadow accounts
-$DisabledShadowAccountOU = $null # DistinguishedName of an OU for moving disabled shadow accounts
+$DisabledShadowAccountOU = 'TODO' # DistinguishedName of an OU for moving disabled shadow accounts
 $AppID = 'TODO' # Insert your application's Client ID
 $TenantID = 'TODO' # Tenant ID of Azure AD
 $Cert = 'TODO' #Certificate thumbprint used by application for authentication
