@@ -82,10 +82,17 @@ Get-MgUser -Filter "userType eq 'Guest' and accountenabled eq true" -All `
 	}
 
 # Populate hash table with membership of target group from Azure AD using object ID as key
-Get-MgGroupMember -GroupId $B2BGroupID -All `
-	| ForEach-Object {
+if($B2BGroupID){
+	Get-MgGroupMember -GroupId $B2BGroupID -All `
+		| ForEach-Object{
+			$UsersInB2BGroupHash[$_.Id] = $_
+		}
+}else{
+	$TenantGuestUsersHash.Values `
+	| ForEach-Object{
 		$UsersInB2BGroupHash[$_.Id] = $_
 	}
+}
 
 # Populate hash table with all accounts in shadow account OU using UPN as key
 Get-ADUser -Filter * -SearchBase $ShadowAccountOU `
